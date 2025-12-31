@@ -1,0 +1,22 @@
+# Requirements for Nemotron Fine-tuning
+
+# Core
+torch>=2.1.0
+transformers>=4.48.0
+datasets>=2.16.0
+accelerate>=0.27.0
+
+# LoRA/QLoRA
+peft>=0.8.0
+bitsandbytes>=0.42.0
+
+# Training utilities
+tensorboard>=2.15.0
+wandb>=0.16.0
+tqdm>=4.66.0
+
+# Optional: Flash Attention (faster training)
+# flash-attn>=2.5.0  # Requires CUDA 11.8+, install manually
+
+# Optional: DeepSpeed (multi-GPU)
+# deepspeed>=0.13.0
