@@ -13,7 +13,7 @@ import sys
 
 # CRITICAL: Set CUDA memory allocation config BEFORE importing anything else
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
-
+os.environ["HF_DISABLE_TORCHAO"] = "1"
 # CRITICAL: Import unsloth FIRST before transformers/trl/peft
 from unsloth import FastLanguageModel
 
@@ -189,7 +189,7 @@ def main():
         model_name=args.model_name,
         max_seq_length=args.max_seq_length,
         dtype=torch.bfloat16,  # Auto-detect
-        #load_in_4bit=True,  # Use 4-bit quantization
+        load_in_4bit=True,  # Use 4-bit quantization
         trust_remote_code=True,
         device_map="auto",
     )
