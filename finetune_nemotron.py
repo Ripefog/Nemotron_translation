@@ -48,38 +48,49 @@ def load_json_dataset(file_path: str) -> Dataset:
     return Dataset.from_list(data)
 
 
-def formatting_prompts_func(examples):
+def formatting_prompts_func(examples, tokenizer):
     """
-    Format examples for SFTTrainer.
-    Convert to chat format with instruction using tokenizer's chat template.
-    """
-    from random import choice
+    Format examples for SFTTrainer using proper chat template.
     
-    texts = []
+    Each sample is processed TWICE:
+    - Once as EN → VI
+    - Once as VI → EN
+    
+    This doubles the effective training data and ensures balanced bidirectional training.
+    """
+    conversations = []
+    
     for i in range(len(examples["en"])):
         en_text = examples["en"][i]
         vi_text = examples["vi"][i]
         
-        # Random direction
-        if choice([True, False]):
-            # EN -> VI
-            instruction = f'Dịch câu sau sang tiếng Việt: "{en_text}"'
-            response = vi_text
-        else:
-            # VI -> EN  
-            instruction = f'Translate the following sentence into English: "{vi_text}"'
-            response = en_text
+        # Direction 1: EN -> VI
+        instruction_en2vi = f'Dịch câu sau sang tiếng Việt: "{en_text}"'
+        conversation_en2vi = [
+            {"role": "system", "content": "/no_think"},
+            {"role": "user", "content": instruction_en2vi},
+            {"role": "assistant", "content": vi_text},
+        ]
+        conversations.append(conversation_en2vi)
         
-        # Format as chat using Nemotron format
-        text = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-/no_think<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-{instruction}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-{response}<|eot_id|>"""
-        
-        texts.append(text)
+        # Direction 2: VI -> EN
+        instruction_vi2en = f'Translate the following sentence into English: "{vi_text}"'
+        conversation_vi2en = [
+            {"role": "system", "content": "/no_think"},
+            {"role": "user", "content": instruction_vi2en},
+            {"role": "assistant", "content": en_text},
+        ]
+        conversations.append(conversation_vi2en)
+    
+    # Apply chat template using tokenizer
+    texts = [
+        tokenizer.apply_chat_template(
+            convo, 
+            tokenize=False, 
+            add_generation_prompt=False
+        ) 
+        for convo in conversations
+    ]
     
     return {"text": texts}
 
@@ -177,9 +188,10 @@ def main():
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=args.model_name,
         max_seq_length=args.max_seq_length,
-        dtype=None,  # Auto-detect
-        load_in_4bit=True,  # Use 4-bit quantization
+        dtype=torch.bfloat16,  # Auto-detect
+        #load_in_4bit=True,  # Use 4-bit quantization
         trust_remote_code=True,
+        device_map="auto",
     )
     
     logger.info(f"✓ Model loaded with Unsloth (2-5x faster training)")
@@ -196,8 +208,9 @@ def main():
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout,
         target_modules=[
-            "q_proj", "k_proj", "v_proj", "o_proj",
-            "gate_proj", "up_proj", "down_proj"
+            "q_proj", "k_proj", "v_proj", "o_proj",      # Attention layers
+            "gate_proj", "up_proj", "down_proj",          # MLP layers
+            "in_proj", "out_proj",                         # Mamba layers (CRITICAL for Nemotron!)
         ],
         bias="none",
         use_gradient_checkpointing="unsloth",  # Unsloth's optimized checkpointing
@@ -223,24 +236,29 @@ def main():
         val_dataset = val_dataset.select(range(min(args.max_val_samples, len(val_dataset))))
     logger.info(f"  Val: {len(val_dataset):,} samples")
     
-    # Format datasets
+    # Format datasets using chat template
     logger.info("  Formatting datasets for SFT...")
+    
+    # Create a wrapper function that passes tokenizer
+    def format_with_tokenizer(examples):
+        return formatting_prompts_func(examples, tokenizer)
+    
     train_dataset = train_dataset.map(
-        formatting_prompts_func,
+        format_with_tokenizer,
         batched=True,
         remove_columns=train_dataset.column_names
     )
     val_dataset = val_dataset.map(
-        formatting_prompts_func,
+        format_with_tokenizer,
         batched=True,
         remove_columns=val_dataset.column_names
     )
-    logger.info("✓ Datasets formatted")
+    logger.info("✓ Datasets formatted with chat template")
     
     # =========================================================================
     # Training arguments
     # =========================================================================
-    logger.info("\n[4/5] Configuring trainer...")
+    logger.info("\n[4/6] Configuring trainer...")
     
     training_args = TrainingArguments(
         output_dir=args.output_dir,
@@ -284,6 +302,21 @@ def main():
     )
     
     logger.info("✓ SFTTrainer configured")
+    
+    # =========================================================================
+    # Apply response-only training (CRITICAL for accuracy!)
+    # =========================================================================
+    logger.info("\n[5/6] Applying train_on_responses_only...")
+    
+    from unsloth.chat_templates import train_on_responses_only
+    trainer = train_on_responses_only(
+        trainer,
+        instruction_part="<|im_start|>user\n",      # Nemotron uses <|im_start|> format
+        response_part="<|im_start|>assistant\n",
+    )
+    
+    logger.info("✓ Trainer will only compute loss on assistant responses")
+    logger.info("  (Instructions are masked with -100)")
     
     # =========================================================================
     # Train

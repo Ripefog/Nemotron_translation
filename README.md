@@ -1,281 +1,278 @@
-# Hướng Dẫn Chạy Fine-tuning Nemotron cho EN↔VI Translation
+# Nemotron EN↔VI Translation Fine-tuning
 
-## Yêu Cầu Hệ Thống
+Fine-tuning NVIDIA Nemotron-Nano-9B-v2 for bidirectional English ↔ Vietnamese translation using Unsloth (2-5x faster, 60% less VRAM).
 
-- **GPU:** NVIDIA GPU với ít nhất 16GB VRAM (A100, RTX 4090, hoặc tương đương)
-- **RAM:** 32GB+ khuyến nghị
-- **Storage:** ~500GB cho model + dataset
-- **CUDA:** 11.8 hoặc mới hơn
+## Requirements
+
+- **GPU:** NVIDIA GPU with 16GB+ VRAM (A100, RTX 4090, RTX 5090)
+- **RAM:** 32GB+ recommended
+- **Storage:** ~500GB for model + dataset
+- **CUDA:** 12.1 or newer
+
+## Performance
+
+| Method | Speed | VRAM | Quality |
+|--------|-------|------|---------|
+| Standard PEFT | 1x | 16GB+ | ✓ |
+| **Unsloth** | 2-5x | 6-10GB | ✓✓ |
 
 ---
 
-## Bước 1: Cài Đặt Dependencies
+## Quick Start
+
+### 1. Installation
 
 ```bash
 cd d:\Pythera\pythera
 
-# Cài đặt packages cần thiết
+# Install dependencies
 pip install -r requirements.txt
 
-# (Optional) Cài Flash Attention để training nhanh hơn
-pip install flash-attn --no-build-isolation
+# Install Unsloth (choose based on your CUDA version)
+# CUDA 12.1:
+pip install "unsloth[cu121-torch240] @ git+https://github.com/unslothai/unsloth.git"
+
+# Install mamba-ssm (required for Nemotron)
+conda install -c conda-forge mamba-ssm
 ```
 
----
-
-## Bước 2: Kiểm Tra Dataset
+### 2. Dry Run (Test)
 
 ```bash
-# Kiểm tra format của dataset
-python prepare_dataset.py --check_only
-
-# Kết quả mong đợi:
-# Sample 1:
-#   EN: Hello, how are you?
-#   VI: Xin chào, bạn khỏe không?
-#   Source: mtet
-```
-
----
-
-## Bước 3: Dry Run (Test Nhanh)
-
-```bash
-# Chạy thử với 10 steps và 100 samples
+CUDA_VISIBLE_DEVICES=0 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
 python finetune_nemotron.py --dry_run
-
-# Kết quả mong đợi:
-# - Load model thành công
-# - QLoRA adapters được apply
-# - Training chạy 10 steps
-# - Model được save vào checkpoints/
 ```
 
-**Nếu gặp lỗi:**
-- `CUDA out of memory`: Giảm `per_device_train_batch_size` xuống 1
-- `Import error`: Kiểm tra lại requirements.txt
-- `Model not found`: Kiểm tra kết nối internet
+### 3. Full Training
+
+```bash
+CUDA_VISIBLE_DEVICES=0,1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+python finetune_nemotron.py \
+    --train_file ../datasets/dataset/train.json \
+    --val_file ../datasets/dataset/val.json \
+    --output_dir ../checkpoints/nemotron-translation \
+    --num_train_epochs 1
+```
 
 ---
 
-## Bước 4: Training Đầy Đủ
+## Training Options
 
-### Option A: Training với Default Settings
-
+### Single GPU
 ```bash
+CUDA_VISIBLE_DEVICES=0 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
 python finetune_nemotron.py \
-    --train_file ../datasets/combined_json/train.json \
-    --val_file ../datasets/combined_json/val.json \
-    --output_dir ../checkpoints/nemotron-translation \
-    --num_train_epochs 1
+    --per_device_train_batch_size 2 \
+    --gradient_accumulation_steps 8
 ```
 
-### Option B: Training với WandB Logging
-
+### Multi-GPU
 ```bash
-# Đăng nhập WandB (chỉ cần 1 lần)
-wandb login
-
-# Training với WandB
+CUDA_VISIBLE_DEVICES=0,1,2 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
 python finetune_nemotron.py \
-    --train_file ../datasets/combined_json/train.json \
-    --val_file ../datasets/combined_json/val.json \
-    --output_dir ../checkpoints/nemotron-translation \
-    --use_wandb \
-    --wandb_project "nemotron-translation" \
-    --wandb_run_name "run-1-epoch1" \
-    --num_train_epochs 1
-```
-
-### Option C: Chọn GPUs Cụ Thể (Multi-GPU)
-
-```bash
-# Sử dụng GPU 0, 1, 2 (trong 6 GPUs)
-python finetune_nemotron.py \
-    --train_file ../datasets/combined_json/train.json \
-    --val_file ../datasets/combined_json/val.json \
-    --output_dir ../checkpoints/nemotron-translation \
-    --gpu_ids "0,1,2" \
-    --num_train_epochs 1
-
-# Sử dụng tất cả 6 GPUs
-python finetune_nemotron.py \
-    --gpu_ids "0,1,2,3,4,5" \
-    --use_wandb \
-    --num_train_epochs 1
-```
-
-### Option D: Training với Custom Settings
-
-```bash
-python finetune_nemotron.py \
-    --train_file ../datasets/combined_json/train.json \
-    --val_file ../datasets/combined_json/val.json \
-    --output_dir ../checkpoints/nemotron-translation \
-    --num_train_epochs 3 \
     --per_device_train_batch_size 4 \
-    --gradient_accumulation_steps 4 \
-    --learning_rate 3e-5 \
-    --lora_r 128 \
-    --lora_alpha 256 \
-    --max_length 768 \
-    --save_steps 1000 \
-    --eval_steps 1000
+    --gradient_accumulation_steps 4
 ```
 
-### Hyperparameters Giải Thích:
-
-| Parameter | Default | Mô tả |
-|-----------|---------|-------|
-| `--lora_r` | 64 | LoRA rank (càng cao càng nhiều params) |
-| `--lora_alpha` | 128 | LoRA scaling (thường = 2x rank) |
-| `--per_device_train_batch_size` | 2 | Batch size mỗi GPU |
-| `--gradient_accumulation_steps` | 8 | Effective batch = 2 × 8 = 16 |
-| `--learning_rate` | 2e-5 | Learning rate |
-| `--max_length` | 512 | Max sequence length |
-| `--num_train_epochs` | 1 | Số epochs |
-
----
-
-## Bước 5: Monitor Training
-
-### TensorBoard
-
+### Custom Hyperparameters
 ```bash
-# Mở terminal mới
-tensorboard --logdir ../checkpoints/nemotron-translation
-
-# Truy cập: http://localhost:6006
-```
-
-### Logs
-
-```bash
-# Xem logs real-time
-tail -f ../checkpoints/nemotron-translation/trainer_state.json
+python finetune_nemotron.py \
+    --lora_r 64 \                    # LoRA rank
+    --lora_alpha 128 \               # LoRA alpha (2x rank)
+    --learning_rate 2e-4 \           # Learning rate
+    --max_seq_length 512 \           # Max sequence length
+    --per_device_train_batch_size 2 \
+    --gradient_accumulation_steps 8 \
+    --num_train_epochs 1
 ```
 
 ---
 
-## Bước 6: Inference (Test Model)
+## Dataset
 
+- **Train:** 1,157,897 samples → 2,315,794 after bidirectional processing
+- **Validation:** 4,437 samples
+- **Test:** 3,622 samples
+- **Sources:** mtet (70%) + MedEV (30%)
+
+Each sample is processed TWICE:
+1. EN → VI: `Dịch câu sau sang tiếng Việt: "{en}"`
+2. VI → EN: `Translate the following sentence into English: "{vi}"`
+
+---
+
+## Key Features
+
+### 1. Unsloth Optimizations
+- **FastLanguageModel** for 2-5x faster training
+- **Optimized gradient checkpointing**
+- **8-bit AdamW optimizer**
+- **Automatic model merging**
+
+### 2. Mamba + Transformer Hybrid
+LoRA targets both architectures:
 ```python
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch
+target_modules = [
+    "q_proj", "k_proj", "v_proj", "o_proj",   # Attention
+    "gate_proj", "up_proj", "down_proj",       # MLP
+    "in_proj", "out_proj",                      # Mamba layers
+]
+```
 
-# Load model
-model_path = "d:/Pythera/checkpoints/nemotron-translation"
-tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
-model = AutoModelForCausalLM.from_pretrained(
-    model_path,
-    torch_dtype=torch.bfloat16,
-    device_map="auto"
+### 3. Response-Only Training
+Uses `train_on_responses_only` to mask instruction tokens:
+```python
+from unsloth.chat_templates import train_on_responses_only
+trainer = train_on_responses_only(
+    trainer,
+    instruction_part="<|im_start|>user\n",
+    response_part="<|im_start|>assistant\n",
+)
+```
+
+### 4. Proper Chat Template
+Uses Nemotron's native chat template:
+```python
+text = tokenizer.apply_chat_template(
+    conversation,
+    tokenize=False,
+    add_generation_prompt=False
+)
+```
+
+---
+
+## Inference
+
+### Using Unsloth
+```python
+from unsloth import FastLanguageModel
+
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name="../checkpoints/nemotron-translation/merged",
+    max_seq_length=512,
+    dtype=None,
 )
 
-# Test EN → VI
+FastLanguageModel.for_inference(model)
+
 messages = [
     {"role": "system", "content": "/no_think"},
     {"role": "user", "content": 'Dịch câu sau sang tiếng Việt: "Hello, how are you?"'}
 ]
 
-inputs = tokenizer.apply_chat_template(
-    messages,
-    return_tensors="pt",
-    add_generation_prompt=True
-).to(model.device)
-
-outputs = model.generate(
-    inputs,
-    max_new_tokens=128,
-    do_sample=False,
-    pad_token_id=tokenizer.pad_token_id
-)
-
+inputs = tokenizer.apply_chat_template(messages, return_tensors="pt").to("cuda")
+outputs = model.generate(**inputs, max_new_tokens=128)
 print(tokenizer.decode(outputs[0], skip_special_tokens=True))
-# Expected: "Xin chào, bạn khỏe không?"
+```
+
+### Using Standard Transformers
+```python
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import torch
+
+model = AutoModelForCausalLM.from_pretrained(
+    "../checkpoints/nemotron-translation/merged",
+    torch_dtype=torch.bfloat16,
+    device_map="auto",
+    trust_remote_code=True
+)
+tokenizer = AutoTokenizer.from_pretrained("../checkpoints/nemotron-translation/merged")
+```
+
+---
+
+## Monitoring
+
+### WandB
+```bash
+# Login (first time only)
+wandb login
+
+# Training with WandB
+python finetune_nemotron.py \
+    --use_wandb \
+    --wandb_project "nemotron-translation" \
+    --wandb_run_name "run-1"
+```
+
+### TensorBoard
+```bash
+tensorboard --logdir ../checkpoints/nemotron-translation
+# Access: http://localhost:6006
 ```
 
 ---
 
 ## Troubleshooting
 
-### 1. CUDA Out of Memory
-
+### CUDA Out of Memory
 ```bash
-# Giảm batch size
+# Reduce batch size
 python finetune_nemotron.py \
     --per_device_train_batch_size 1 \
-    --gradient_accumulation_steps 16
+    --gradient_accumulation_steps 16 \
+    --max_seq_length 256
 ```
 
-### 2. Training Quá Chậm
-
+### Unsloth Import Error
 ```bash
-# Tăng batch size nếu có đủ VRAM
+# Set env before running
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python finetune_nemotron.py
+```
+
+### mamba-ssm Not Found
+```bash
+conda install -c conda-forge mamba-ssm
+# Or: pip install mamba-ssm --no-build-isolation
+```
+
+### Training Slow
+```bash
+# Increase batch size if VRAM allows
 python finetune_nemotron.py \
     --per_device_train_batch_size 4 \
     --gradient_accumulation_steps 4
 ```
 
-### 3. Model Không Học (Loss Không Giảm)
+---
 
-- Tăng learning rate: `--learning_rate 5e-5`
-- Tăng LoRA rank: `--lora_r 128 --lora_alpha 256`
-- Train nhiều epochs hơn: `--num_train_epochs 3`
+## Hyperparameters Reference
 
-### 4. Overfitting
-
-- Giảm learning rate: `--learning_rate 1e-5`
-- Tăng weight decay: `--weight_decay 0.1`
-- Early stopping: Model tự động save best checkpoint
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--lora_r` | 64 | LoRA rank |
+| `--lora_alpha` | 128 | LoRA scaling (2x rank) |
+| `--lora_dropout` | 0.0 | Dropout (Unsloth recommends 0) |
+| `--per_device_train_batch_size` | 2 | Batch size per GPU |
+| `--gradient_accumulation_steps` | 8 | Effective batch = 2 × 8 = 16 |
+| `--learning_rate` | 2e-4 | Learning rate |
+| `--max_seq_length` | 512 | Max sequence length |
+| `--num_train_epochs` | 1 | Number of epochs |
 
 ---
 
-## Thời Gian Ước Tính
+## Training Time Estimates
 
 | Dataset Size | GPU | Batch Size | Time/Epoch |
 |--------------|-----|------------|------------|
-| 1.16M samples | A100 (80GB) | 4 | ~12 hours |
-| 1.16M samples | A100 (40GB) | 2 | ~24 hours |
-| 1.16M samples | RTX 4090 | 1 | ~48 hours |
+| 2.3M samples | A100 (80GB) | 4 | ~12 hours |
+| 2.3M samples | A100 (40GB) | 2 | ~24 hours |
+| 2.3M samples | RTX 5090 (32GB) | 2 | ~36 hours |
 
 ---
 
-## Evaluation
+## Files
 
-```bash
-# Sau khi training xong, evaluate trên test set
-python -c "
-from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer
-from datasets import load_dataset
-import torch
-
-model = AutoModelForCausalLM.from_pretrained(
-    'd:/Pythera/checkpoints/nemotron-translation',
-    torch_dtype=torch.bfloat16,
-    device_map='auto'
-)
-tokenizer = AutoTokenizer.from_pretrained('d:/Pythera/checkpoints/nemotron-translation')
-
-# Load test set và evaluate
-# TODO: Implement BLEU score calculation
-"
-```
+- `finetune_nemotron.py` - Main training script with Unsloth
+- `data_collator.py` - NemotronTranslationCollator
+- `prepare_dataset.py` - Dataset preprocessing
+- `requirements.txt` - Dependencies
 
 ---
 
-## Tips
+## References
 
-1. **Checkpoint Management:** Model tự động save mỗi 500 steps, giữ 3 checkpoints tốt nhất
-2. **Resume Training:** Nếu bị gián đoạn, thêm `--resume_from_checkpoint <path>`
-3. **Multi-GPU:** Tự động sử dụng tất cả GPUs với `device_map="auto"`
-4. **Memory Optimization:** QLoRA đã optimize memory, không cần thêm gì
-
----
-
-## Liên Hệ / Issues
-
-Nếu gặp vấn đề, kiểm tra:
-1. CUDA version: `nvidia-smi`
-2. PyTorch version: `python -c "import torch; print(torch.__version__)"`
-3. GPU memory: `nvidia-smi`
+- [Unsloth GitHub](https://github.com/unslothai/unsloth)
+- [Nemotron Model](https://huggingface.co/nvidia/NVIDIA-Nemotron-Nano-9B-v2)
+- [TRL Documentation](https://huggingface.co/docs/trl)

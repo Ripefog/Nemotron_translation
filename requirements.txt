@@ -6,6 +6,10 @@ transformers>=4.48.0
 datasets>=2.16.0
 accelerate>=0.27.0
 
+# Mamba (required for Nemotron Mamba-2 architecture)
+mamba-ssm>=2.0.0
+causal-conv1d>=1.4.0
+
 # LoRA/QLoRA
 peft>=0.8.0
 bitsandbytes>=0.42.0
@@ -20,7 +24,7 @@ bitsandbytes>=0.42.0
 #   wget -qO- https://raw.githubusercontent.com/unslothai/unsloth/main/unsloth/_auto_install.py | python -
 
 # Default for CUDA 12.1 + PyTorch 2.4:
-unsloth[cu121-torch240] @ git+https://github.com/unslothai/unsloth.git
+#unsloth[cu121-torch240] @ git+https://github.com/unslothai/unsloth.git
 trl>=0.7.0
 
 # Training utilities
