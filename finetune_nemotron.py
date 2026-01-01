@@ -10,6 +10,13 @@ Usage:
 
 import os
 import sys
+
+# CRITICAL: Set CUDA memory allocation config BEFORE importing anything else
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+
+# CRITICAL: Import unsloth FIRST before transformers/trl/peft
+from unsloth import FastLanguageModel
+
 import json
 import argparse
 import logging
@@ -166,8 +173,6 @@ def main():
     # Load model with Unsloth
     # =========================================================================
     logger.info("\n[1/5] Loading model with Unsloth...")
-    
-    from unsloth import FastLanguageModel
     
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=args.model_name,
