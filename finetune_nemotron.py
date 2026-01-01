@@ -11,9 +11,13 @@ Usage:
 import os
 import sys
 
-# CRITICAL: Set CUDA memory allocation config BEFORE importing anything else
+# CRITICAL: Set environment variables BEFORE importing anything else
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 os.environ["HF_DISABLE_TORCHAO"] = "1"
+
+# Optional: Set default GPUs (change as needed)
+# os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'  # Uncomment to use specific GPUs
+
 # CRITICAL: Import unsloth FIRST before transformers/trl/peft
 from unsloth import FastLanguageModel
 
@@ -102,8 +106,8 @@ def main():
     parser.add_argument("--model_name", type=str, default="nvidia/NVIDIA-Nemotron-Nano-9B-v2")
     
     # Data arguments
-    parser.add_argument("--train_file", type=str, default="../datasets/combined_json/train.json")
-    parser.add_argument("--val_file", type=str, default="../datasets/combined_json/val.json")
+    parser.add_argument("--train_file", type=str, default="../dataset/train.json")
+    parser.add_argument("--val_file", type=str, default="../dataset/val.json")
     parser.add_argument("--max_seq_length", type=int, default=512)
     parser.add_argument("--max_train_samples", type=int, default=None)
     parser.add_argument("--max_val_samples", type=int, default=None)
