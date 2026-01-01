@@ -10,6 +10,19 @@ accelerate>=0.27.0
 peft>=0.8.0
 bitsandbytes>=0.42.0
 
+# Unsloth (2-5x faster training)
+# Choose ONE based on your CUDA version:
+# For CUDA 12.1: unsloth[cu121-torch240] @ git+https://github.com/unslothai/unsloth.git
+# For CUDA 12.4: unsloth[cu124-torch250] @ git+https://github.com/unslothai/unsloth.git
+# For CUDA 11.8: unsloth[cu118-torch240] @ git+https://github.com/unslothai/unsloth.git
+# For Ampere GPUs (A100, RTX 3090/4090), add -ampere: unsloth[cu121-ampere-torch240]
+# Auto-detect (recommended): run this first:
+#   wget -qO- https://raw.githubusercontent.com/unslothai/unsloth/main/unsloth/_auto_install.py | python -
+
+# Default for CUDA 12.1 + PyTorch 2.4:
+unsloth[cu121-torch240] @ git+https://github.com/unslothai/unsloth.git
+trl>=0.7.0
+
 # Training utilities
 tensorboard>=2.15.0
 wandb>=0.16.0
