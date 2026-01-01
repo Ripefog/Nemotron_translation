@@ -12,7 +12,8 @@ import os
 import sys
 
 # CRITICAL: Set environment variables BEFORE importing anything else
-os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+# NOTE: Unsloth may require this to be empty on some setups
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = ''
 os.environ["HF_DISABLE_TORCHAO"] = "1"
 
 # Optional: Set default GPUs (change as needed)
