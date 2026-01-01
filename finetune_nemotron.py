@@ -309,19 +309,21 @@ def main():
     logger.info("✓ SFTTrainer configured")
     
     # =========================================================================
-    # Apply response-only training (CRITICAL for accuracy!)
+    # Apply response-only training (OPTIONAL - requires correct format detection)
     # =========================================================================
-    logger.info("\n[5/6] Applying train_on_responses_only...")
+    # NOTE: Temporarily disabled - need to detect correct Nemotron chat template format
+    # The model will train on full sequences (both instruction and response)
+    # This is still valid for fine-tuning, just slightly less efficient
     
-    from unsloth.chat_templates import train_on_responses_only
-    trainer = train_on_responses_only(
-        trainer,
-        instruction_part="<|im_start|>user\n",      # Nemotron uses <|im_start|> format
-        response_part="<|im_start|>assistant\n",
-    )
+    # To enable, uncomment below and set correct instruction_part/response_part:
+    # from unsloth.chat_templates import train_on_responses_only
+    # trainer = train_on_responses_only(
+    #     trainer,
+    #     instruction_part="<user_token>",  # TODO: Detect actual token
+    #     response_part="<assistant_token>",
+    # )
     
-    logger.info("✓ Trainer will only compute loss on assistant responses")
-    logger.info("  (Instructions are masked with -100)")
+    logger.info("\n[5/6] Skipping train_on_responses_only (training on full sequence)")
     
     # =========================================================================
     # Train
