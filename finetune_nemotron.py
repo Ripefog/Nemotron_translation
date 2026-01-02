@@ -137,7 +137,7 @@ def main():
     parser.add_argument("--fp16", action="store_true", default=False)
     parser.add_argument("--bf16", action="store_true", default=False)  # Default bf16 for RTX 5090
     # Logging arguments
-    parser.add_argument("--use_wandb", action="store_true", default=True)
+    parser.add_argument("--use_wandb", action="store_true", default=False)
     parser.add_argument("--wandb_project", type=str, default="nemotron-translation")
     parser.add_argument("--wandb_run_name", type=str, default=None)
     
@@ -197,7 +197,7 @@ def main():
         max_seq_length=args.max_seq_length,
         #dtype=torch.float16,   # fp16 + QLoRA
         load_in_4bit=False,
-        load_in_8bit=True,
+        load_in_8bit=False,  # Disabled - causes shape mismatch with Mamba layers
         trust_remote_code=True,
         device_map="auto", 
         unsloth_force_compile = True,
@@ -300,7 +300,7 @@ def main():
         lr_scheduler_type="linear",
         max_steps=args.max_steps,
         seed=args.seed,
-        report_to=["tensorboard", "wandb"] if args.use_wandb else ["tensorboard"],
+        report_to=["tensorboard", "wandb"] if args.use_wandb else "none",  # Use 'none' to avoid JSON serialization issues
         run_name=args.wandb_run_name if args.use_wandb else None,
         load_best_model_at_end=True,
         metric_for_best_model="eval_loss",
