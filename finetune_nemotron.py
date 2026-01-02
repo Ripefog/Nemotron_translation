@@ -200,7 +200,7 @@ def main():
         load_in_8bit=False,
         trust_remote_code=True,
         device_map="auto", 
-        unsloth_force_compile = True,
+        # unsloth_force_compile = True,  # Disabled - causes cache issues
         attn_implementation="eager",  
     )
     logger.info("=== DEBUG MODEL INFO ===")
