@@ -193,13 +193,12 @@ def main():
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=args.model_name,
         max_seq_length=args.max_seq_length,
-        dtype=None,
-        # NOTE: 4-bit disabled - bitsandbytes not compiled for RTX 5090 (sm_120)
-        # Will use bf16 LoRA instead of QLoRA (~30GB VRAM per GPU)
-        load_in_4bit=True,
+        dtype=torch.float16,   # fp16 + QLoRA
+        load_in_4bit=True,     # Bật QLoRA
         trust_remote_code=True,
-        device_map="auto",
+        device_map="auto",     # multi-GPU tự động
     )
+
     
     logger.info(f"✓ Model loaded with Unsloth (2-5x faster training)")
     logger.info(f"  Max seq length: {args.max_seq_length}")
