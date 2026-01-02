@@ -135,7 +135,7 @@ def main():
     parser.add_argument("--dry_run", action="store_true", default=False)
     # Precision: use --bf16 for bf16 or --no-fp16 to disable fp16
     parser.add_argument("--fp16", action="store_true", default=False)
-    parser.add_argument("--bf16", action="store_true", default=True)  # Default bf16 for RTX 5090
+    parser.add_argument("--bf16", action="store_true", default=False)  # Default bf16 for RTX 5090
     # Logging arguments
     parser.add_argument("--use_wandb", action="store_true", default=True)
     parser.add_argument("--wandb_project", type=str, default="nemotron-translation")
@@ -232,7 +232,7 @@ def main():
             "in_proj", "out_proj",                         # Mamba layers (CRITICAL for Nemotron!)
         ],
         bias="none",
-        use_gradient_checkpointing="unsloth",  # Unsloth's optimized checkpointing
+        use_gradient_checkpointing=False,  # Unsloth's optimized checkpointing
         random_state=args.seed,
         use_rslora=False,
         loftq_config=None,
