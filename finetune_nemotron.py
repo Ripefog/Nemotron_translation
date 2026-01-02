@@ -291,7 +291,7 @@ def main():
         logging_steps=args.logging_steps,
         save_steps=args.save_steps,
         eval_steps=args.eval_steps,
-        eval_strategy="steps",
+        eval_strategy="epoch",
         save_total_limit=args.save_total_limit,
        # fp16=args.fp16,
         #bf16=args.bf16,
