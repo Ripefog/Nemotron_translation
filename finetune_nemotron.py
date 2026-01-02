@@ -29,7 +29,7 @@ from pathlib import Path
 
 import torch
 from datasets import Dataset
-from transformers import TrainingArguments, set_seed
+from transformers import TrainingArguments, set_seed, EarlyStoppingCallback
 from trl import SFTTrainer
 
 # Add pythera folder to path for imports
@@ -297,6 +297,12 @@ def main():
     # =========================================================================
     # Create SFTTrainer
     # =========================================================================
+    # Early stopping callback - stops training if eval_loss doesn't improve for 3 evals
+    early_stopping_callback = EarlyStoppingCallback(
+        early_stopping_patience=3,  # Stop after 3 evals without improvement
+        early_stopping_threshold=0.01,  # Minimum improvement threshold
+    )
+    
     trainer = SFTTrainer(
         model=model,
         tokenizer=tokenizer,
@@ -306,6 +312,7 @@ def main():
         max_seq_length=args.max_seq_length,
         args=training_args,
         packing=False,  # Can set True for more efficiency with short sequences
+        callbacks=[early_stopping_callback],
     )
     
     logger.info("✓ SFTTrainer configured")
