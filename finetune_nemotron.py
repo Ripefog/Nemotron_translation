@@ -196,7 +196,7 @@ def main():
         model_name=args.model_name,
         max_seq_length=args.max_seq_length,
         #dtype=torch.float16,   # fp16 + QLoRA
-        load_in_4bit=True,
+        load_in_4bit=False,
         load_in_8bit=False,
         trust_remote_code=True,
         device_map="auto", 
