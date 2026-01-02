@@ -193,10 +193,10 @@ def main():
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=args.model_name,
         max_seq_length=args.max_seq_length,
-        dtype=torch.bfloat16,
+        dtype=None,
         # NOTE: 4-bit disabled - bitsandbytes not compiled for RTX 5090 (sm_120)
         # Will use bf16 LoRA instead of QLoRA (~30GB VRAM per GPU)
-        load_in_4bit=False,
+        load_in_4bit=True,
         trust_remote_code=True,
         device_map="auto",
     )
