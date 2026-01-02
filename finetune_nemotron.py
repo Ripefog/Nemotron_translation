@@ -232,7 +232,7 @@ def main():
             "in_proj", "out_proj",                         # Mamba layers (CRITICAL for Nemotron!)
         ],
         bias="none",
-        use_gradient_checkpointing=False,  # Unsloth's optimized checkpointing
+        use_gradient_checkpointing = "unsloth",  # Unsloth's optimized checkpointing
         random_state=args.seed,
         use_rslora=False,
         loftq_config=None,
