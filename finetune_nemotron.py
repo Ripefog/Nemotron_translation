@@ -198,7 +198,9 @@ def main():
         #dtype=torch.float16,   # fp16 + QLoRA
         load_in_4bit=True,     # Bật QLoRA
         trust_remote_code=True,
-        device_map="auto",     # multi-GPU tự động
+        device_map="auto", 
+        unsloth_force_compile = True,
+        attn_implementation="eager",  
     )
     logger.info("=== DEBUG MODEL INFO ===")
     logger.info(f"Model dtype: {model.dtype}")
