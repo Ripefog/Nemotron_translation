@@ -133,8 +133,9 @@ def main():
     parser.add_argument("--save_total_limit", type=int, default=3)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--dry_run", action="store_true", default=False)
-    parser.add_argument("--fp16", type=bool, default=True)
-    parser.add_argument("--bf16", type=bool, default=False)
+    # Precision: use --bf16 for bf16 or --no-fp16 to disable fp16
+    parser.add_argument("--fp16", action="store_true", default=False)
+    parser.add_argument("--bf16", action="store_true", default=True)  # Default bf16 for RTX 5090
     # Logging arguments
     parser.add_argument("--use_wandb", action="store_true", default=True)
     parser.add_argument("--wandb_project", type=str, default="nemotron-translation")
@@ -194,7 +195,7 @@ def main():
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=args.model_name,
         max_seq_length=args.max_seq_length,
-        dtype=torch.float16,   # fp16 + QLoRA
+        #dtype=torch.float16,   # fp16 + QLoRA
         load_in_4bit=True,     # Bật QLoRA
         trust_remote_code=True,
         device_map="auto",     # multi-GPU tự động
@@ -289,8 +290,8 @@ def main():
         eval_steps=args.eval_steps,
         eval_strategy="steps",
         save_total_limit=args.save_total_limit,
-        fp16=args.fp16,
-        bf16=args.bf16,
+       # fp16=args.fp16,
+        #bf16=args.bf16,
         optim="adamw_8bit",  # 8-bit AdamW for memory efficiency
         weight_decay=0.01,
         lr_scheduler_type="linear",
