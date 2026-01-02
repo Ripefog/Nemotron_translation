@@ -197,7 +197,7 @@ def main():
         max_seq_length=args.max_seq_length,
         #dtype=torch.float16,   # fp16 + QLoRA
         load_in_4bit=False,
-        load_in_8bit=False,  # Disabled - causes shape mismatch with Mamba layers
+        load_in_8bit=False,
         trust_remote_code=True,
         device_map="auto", 
         unsloth_force_compile = True,
