@@ -198,7 +198,16 @@ def main():
         trust_remote_code=True,
         device_map="auto",     # multi-GPU tự động
     )
-
+    logger.info("=== DEBUG MODEL INFO ===")
+    logger.info(f"Model dtype: {model.dtype}")
+    logger.info(f"Device map: {model.hf_device_map if hasattr(model, 'hf_device_map') else 'N/A'}")
+    logger.info(f"Is 4-bit loaded (QLoRA)? {getattr(model, 'is_loaded_in_4bit', False)}")
+    logger.info(f"BitsAndBytes config: {getattr(model, 'bnb_config', None)}")
+    logger.info(f"Model modules using LoRA:")
+    for name, module in model.named_modules():
+        if hasattr(module, "lora_A") or hasattr(module, "lora_B"):
+            logger.info(f"  {name} -> LoRA detected")
+    logger.info("=========================")
     
     logger.info(f"✓ Model loaded with Unsloth (2-5x faster training)")
     logger.info(f"  Max seq length: {args.max_seq_length}")
