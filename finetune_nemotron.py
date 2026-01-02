@@ -133,7 +133,8 @@ def main():
     parser.add_argument("--save_total_limit", type=int, default=3)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--dry_run", action="store_true", default=False)
-    
+    parser.add_argument("--fp16", type=bool, default=True)
+    parser.add_argument("--bf16", type=bool, default=False)
     # Logging arguments
     parser.add_argument("--use_wandb", action="store_true", default=True)
     parser.add_argument("--wandb_project", type=str, default="nemotron-translation")
@@ -288,8 +289,8 @@ def main():
         eval_steps=args.eval_steps,
         eval_strategy="steps",
         save_total_limit=args.save_total_limit,
-        fp16=not torch.cuda.is_bf16_supported(),
-        bf16=torch.cuda.is_bf16_supported(),
+        fp16=args.fp16,
+        bf16=args.bf16,
         optim="adamw_8bit",  # 8-bit AdamW for memory efficiency
         weight_decay=0.01,
         lr_scheduler_type="linear",
