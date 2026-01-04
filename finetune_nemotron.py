@@ -131,7 +131,7 @@ def main():
     parser.add_argument("--logging_steps", type=int, default=10)
     parser.add_argument("--save_steps", type=int, default=500)
     parser.add_argument("--eval_steps", type=int, default=500)
-    parser.add_argument("--save_total_limit", type=int, default=3)
+    parser.add_argument("--save_total_limit", type=int, default=5)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--dry_run", action="store_true", default=False)
     # Precision: use --bf16 for bf16 or --no-fp16 to disable fp16
