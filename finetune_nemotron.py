@@ -200,7 +200,7 @@ def main():
         load_in_4bit=False,
         load_in_8bit=False,
         trust_remote_code=True,
-        # device_map="auto",  # Removed for DDP multi-GPU with Accelerate
+        device_map="auto",  # Reverted - Unsloth không hỗ trợ DDP
         # unsloth_force_compile = True,  # Disabled - causes cache issues
         attn_implementation="eager",  
     )
