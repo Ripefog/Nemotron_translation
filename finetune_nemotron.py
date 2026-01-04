@@ -125,7 +125,8 @@ def main():
     parser.add_argument("--per_device_eval_batch_size", type=int, default=2)
     parser.add_argument("--gradient_accumulation_steps", type=int, default=8)
     parser.add_argument("--learning_rate", type=float, default=2e-4)
-    parser.add_argument("--warmup_steps", type=int, default=10)
+    parser.add_argument("--warmup_steps", type=int, default=0)
+    parser.add_argument("--warmup_ratio", type=float, default=0.05)  # 5% of total steps
     parser.add_argument("--max_steps", type=int, default=-1)
     parser.add_argument("--logging_steps", type=int, default=10)
     parser.add_argument("--save_steps", type=int, default=500)
@@ -288,6 +289,7 @@ def main():
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         learning_rate=args.learning_rate,
         warmup_steps=args.warmup_steps,
+        warmup_ratio=args.warmup_ratio,  # Used when warmup_steps=0
         logging_steps=args.logging_steps,
         eval_strategy="epoch",
         save_strategy="epoch",
