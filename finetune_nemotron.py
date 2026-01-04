@@ -401,14 +401,16 @@ def main():
         
         test_input = 'Dịch câu sau sang tiếng Việt: "Hello, how are you?"'
         
-        inputs = tokenizer(
-            f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-/no_think<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-{test_input}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-""",
+        # Use proper chat template for Nemotron
+        messages = [
+            {"role": "system", "content": "/no_think"},
+            {"role": "user", "content": test_input},
+        ]
+        
+        inputs = tokenizer.apply_chat_template(
+            messages,
+            tokenize=True,
+            add_generation_prompt=True,
             return_tensors="pt"
         ).to(model.device)
         
