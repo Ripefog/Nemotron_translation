@@ -370,17 +370,10 @@ def main():
     tokenizer.save_pretrained(args.output_dir)
     logger.info(f"✓ LoRA adapters saved to: {args.output_dir}")
     
-    # Save merged model for easier inference
-    logger.info("  Merging and saving full model...")
-    try:
-        model.save_pretrained_merged(
-            f"{args.output_dir}/merged",
-            tokenizer,
-            save_method="merged_16bit",  # Can use "merged_4bit" for smaller size
-        )
-        logger.info(f"✓ Merged model saved to: {args.output_dir}/merged")
-    except Exception as e:
-        logger.warning(f"Could not save merged model: {e}")
+    # NOTE: Merging disabled - run inference test first, then merge manually if satisfied
+    # To merge later, use:
+    #   model.save_pretrained_merged(f"{args.output_dir}/merged", tokenizer, save_method="merged_16bit")
+    logger.info("  ⏭️  Skipping auto-merge (verify inference first, then merge manually)")
     
     # Save training metrics
     metrics = train_result.metrics
