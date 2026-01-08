@@ -302,6 +302,73 @@ def main():
     logger.info("✓ Datasets formatted with chat template")
     
     # =========================================================================
+    # CRITICAL: Validate token IDs after Unsloth tokenization
+    # =========================================================================
+    logger.info("  Validating token IDs...")
+    
+    def validate_and_fix_tokens(dataset, vocab_size, name="dataset"):
+        """Check for out-of-range token IDs and report/fix them."""
+        issues_found = 0
+        max_token_seen = 0
+        
+        for i, example in enumerate(dataset):
+            if "input_ids" in example:
+                input_ids = example["input_ids"]
+                if isinstance(input_ids, list):
+                    max_id = max(input_ids) if input_ids else 0
+                    min_id = min(input_ids) if input_ids else 0
+                else:
+                    max_id = input_ids.max().item() if hasattr(input_ids, 'max') else 0
+                    min_id = input_ids.min().item() if hasattr(input_ids, 'min') else 0
+                
+                max_token_seen = max(max_token_seen, max_id)
+                
+                if max_id >= vocab_size or min_id < 0:
+                    issues_found += 1
+                    if issues_found <= 3:  # Only log first 3
+                        logger.warning(f"  ⚠️ {name}[{i}]: token range [{min_id}, {max_id}] exceeds vocab [{0}, {vocab_size-1}]")
+        
+        logger.info(f"  {name}: max_token_id={max_token_seen}, vocab_size={vocab_size}, issues={issues_found}")
+        return issues_found, max_token_seen
+    
+    # Check train dataset (after Unsloth tokenization in trainer init, we check text for now)
+    # The actual tokenization happens in SFTTrainer, so we log the text length
+    logger.info(f"  Train samples text preview (first 2):")
+    for i in range(min(2, len(train_dataset))):
+        text = train_dataset[i]["text"]
+        logger.info(f"    [{i}]: {len(text)} chars, starts with: {text[:100]}...")
+    
+    # =========================================================================
+    # CRITICAL: Direct tokenization test to find out-of-range tokens
+    # =========================================================================
+    logger.info("  Direct tokenization test...")
+    test_text = train_dataset[0]["text"]
+    test_tokens = tokenizer(test_text, return_tensors="pt", truncation=True, max_length=args.max_seq_length)
+    input_ids = test_tokens["input_ids"][0]
+    max_token = input_ids.max().item()
+    min_token = input_ids.min().item()
+    logger.info(f"  Test tokenization: {len(input_ids)} tokens, range=[{min_token}, {max_token}]")
+    logger.info(f"  Vocab size: {vocab_size}")
+    
+    if max_token >= vocab_size:
+        logger.error(f"  ❌ CRITICAL: max_token ({max_token}) >= vocab_size ({vocab_size})")
+        # Find which tokens are problematic
+        problematic = [(i, tid.item()) for i, tid in enumerate(input_ids) if tid >= vocab_size]
+        logger.error(f"  Problematic token positions: {problematic[:10]}")
+        
+        # Try to decode individual tokens to see what they are
+        for pos, tid in problematic[:5]:
+            try:
+                decoded = tokenizer.decode([tid])
+                logger.error(f"    Position {pos}: token_id={tid}, decoded='{decoded}'")
+            except:
+                logger.error(f"    Position {pos}: token_id={tid}, failed to decode")
+        
+        raise ValueError(f"Token IDs exceed vocabulary size! max={max_token}, vocab={vocab_size}")
+    else:
+        logger.info(f"  ✓ All tokens within bounds")
+    
+    # =========================================================================
     # Training arguments
     # =========================================================================
     logger.info("\n[4/6] Configuring trainer...")
