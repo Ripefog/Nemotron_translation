@@ -104,7 +104,7 @@ def main():
     parser = argparse.ArgumentParser(description="Fine-tune Nemotron with Unsloth")
     
     # Model arguments
-    parser.add_argument("--model_name", type=str, default="nvidia/NVIDIA-Nemotron-Nano-9B-v2")
+    parser.add_argument("--model_name", type=str, default="unsloth/NVIDIA-Nemotron-Nano-9B-v2")
     
     # Data arguments
     parser.add_argument("--train_file", type=str, default="../dataset/train.json")
@@ -201,8 +201,8 @@ def main():
         load_in_8bit=False,
         trust_remote_code=True,
         device_map="auto",  # Reverted - Unsloth không hỗ trợ DDP
-        # unsloth_force_compile = True,  # Disabled - causes cache issues
-        attn_implementation="eager",  
+        unsloth_force_compile = True,
+        attn_implementation="eager",
     )
     logger.info("=== DEBUG MODEL INFO ===")
     logger.info(f"Model dtype: {model.dtype}")
