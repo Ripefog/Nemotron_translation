@@ -201,8 +201,8 @@ def main():
         load_in_8bit=False,
         trust_remote_code=True,
         device_map="auto",  # Reverted - Unsloth không hỗ trợ DDP
-        unsloth_force_compile = True,
-        attn_implementation="eager",
+        # unsloth_force_compile = True,  # Disabled - causes cache issues
+        attn_implementation="eager",  
     )
     logger.info("=== DEBUG MODEL INFO ===")
     logger.info(f"Model dtype: {model.dtype}")
@@ -214,31 +214,6 @@ def main():
         if hasattr(module, "lora_A") or hasattr(module, "lora_B"):
             logger.info(f"  {name} -> LoRA detected")
     logger.info("=========================")
-    
-    # =========================================================================
-    # CRITICAL: Fix padding token to prevent CUDA indexing error
-    # =========================================================================
-    # Get embedding size to ensure pad_token_id is within bounds
-    if hasattr(model, 'get_input_embeddings'):
-        embedding_layer = model.get_input_embeddings()
-        vocab_size = embedding_layer.weight.shape[0]
-    else:
-        vocab_size = len(tokenizer)
-    
-    logger.info(f"  Embedding vocab size: {vocab_size}")
-    logger.info(f"  Tokenizer vocab size: {len(tokenizer)}")
-    
-    # Use eos_token as pad_token (guaranteed to be in vocab)
-    if tokenizer.pad_token is None or tokenizer.pad_token_id is None or tokenizer.pad_token_id >= vocab_size:
-        tokenizer.pad_token = tokenizer.eos_token
-        tokenizer.pad_token_id = tokenizer.eos_token_id
-        logger.info(f"  ⚠️ Set pad_token to eos_token: '{tokenizer.pad_token}' (id={tokenizer.pad_token_id})")
-    else:
-        logger.info(f"  Pad token: '{tokenizer.pad_token}' (id={tokenizer.pad_token_id})")
-    
-    # Verify pad_token_id is valid
-    if tokenizer.pad_token_id >= vocab_size:
-        raise ValueError(f"pad_token_id ({tokenizer.pad_token_id}) >= vocab_size ({vocab_size})")
     
     logger.info(f"✓ Model loaded with Unsloth (2-5x faster training)")
     logger.info(f"  Max seq length: {args.max_seq_length}")
