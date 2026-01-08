@@ -204,6 +204,18 @@ def main():
         # unsloth_force_compile = True,  # Disabled - causes cache issues
         attn_implementation="eager",  
     )
+    
+    # =========================================================================
+    # FIX: Padding token issue - Unsloth sets <SPECIAL_999> which may exceed vocab size
+    # =========================================================================
+    # Check if pad_token_id is out of bounds
+    vocab_size = len(tokenizer)
+    if tokenizer.pad_token_id is None or tokenizer.pad_token_id >= vocab_size:
+        logger.warning(f"⚠️ pad_token_id ({tokenizer.pad_token_id}) is invalid or >= vocab_size ({vocab_size})")
+        logger.info("   Setting pad_token = eos_token to fix index out of bounds error")
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+        logger.info(f"   ✓ pad_token_id is now: {tokenizer.pad_token_id}")
     logger.info("=== DEBUG MODEL INFO ===")
     logger.info(f"Model dtype: {model.dtype}")
     logger.info(f"Device map: {model.hf_device_map if hasattr(model, 'hf_device_map') else 'N/A'}")
