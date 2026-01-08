@@ -221,12 +221,25 @@ def main():
     # Get embedding size to ensure pad_token_id is within bounds
     if hasattr(model, 'get_input_embeddings'):
         embedding_layer = model.get_input_embeddings()
-        vocab_size = embedding_layer.weight.shape[0]
+        embedding_vocab_size = embedding_layer.weight.shape[0]
     else:
-        vocab_size = len(tokenizer)
+        embedding_vocab_size = len(tokenizer)
     
-    logger.info(f"  Embedding vocab size: {vocab_size}")
-    logger.info(f"  Tokenizer vocab size: {len(tokenizer)}")
+    tokenizer_vocab_size = len(tokenizer)
+    logger.info(f"  Embedding vocab size: {embedding_vocab_size}")
+    logger.info(f"  Tokenizer vocab size: {tokenizer_vocab_size}")
+    
+    # =========================================================================
+    # CRITICAL FIX: Resize embedding if tokenizer has more tokens
+    # =========================================================================
+    if tokenizer_vocab_size > embedding_vocab_size:
+        logger.warning(f"  ⚠️ Tokenizer vocab ({tokenizer_vocab_size}) > Embedding vocab ({embedding_vocab_size})")
+        logger.info(f"  Resizing model embeddings to {tokenizer_vocab_size}...")
+        model.resize_token_embeddings(tokenizer_vocab_size)
+        vocab_size = tokenizer_vocab_size
+        logger.info(f"  ✓ Embeddings resized to {tokenizer_vocab_size}")
+    else:
+        vocab_size = embedding_vocab_size
     
     # Use eos_token as pad_token (guaranteed to be in vocab)
     if tokenizer.pad_token is None or tokenizer.pad_token_id is None or tokenizer.pad_token_id >= vocab_size:
